@@ -9,8 +9,8 @@ from config import Config
 
 
 # TODO Change to Dataset API
-sketchy_dir = 'tfrecords/sketchy'
-flickr_dir = 'Datasets/flickr'
+sketchy_dir = 'tfrecords/flickr'
+flickr_dir = 'tfrecords/sketchy'
 
 
 paired_filenames_1 = [os.path.join(sketchy_dir, f) for f in os.listdir(sketchy_dir)
@@ -32,12 +32,12 @@ for name in paired_filenames_1:
     if class_id not in class_mapping:
         class_mapping.append(class_id)
 class_mapping = sorted(class_mapping)
-# for name in paired_filenames_2:
-#     name = os.path.splitext(os.path.split(name)[1])[0].split('_coco_')[0]
-#     class_id = classes_id.index(name)
-#     if class_id not in class_mapping:
-#         print(name)
-#         raise RuntimeError
+for name in paired_filenames_2:
+    name = os.path.splitext(os.path.split(name)[1])[0].split('_coco_')[0]
+    class_id = classes_id.index(name)
+    if class_id not in class_mapping:
+        print(name)
+        raise RuntimeError
 num_classes = len(class_mapping)
 
 
