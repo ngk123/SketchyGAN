@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-datafile_path = "../flickr_output"
+datafile_path = "../sketchy_output"
 image_output_path = "../extract_output/images"
 edgemap_output_path = "../extract_output/edges"
 
