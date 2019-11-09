@@ -7,16 +7,16 @@ from data_processing.tfrecord import *
 from scipy import ndimage
 from config import Config
 
-
 # TODO Change to Dataset API
-sketchy_dir = 'tfrecords/flickr'
-flickr_dir = 'tfrecords/sketchy'
+sketchy_dir = 'tfrecords/sketchy'
+flickr_dir = 'tfrecords/flickr'
 
-
-paired_filenames_1 = [os.path.join(sketchy_dir, f) for f in os.listdir(sketchy_dir)
-                      if os.path.isfile(os.path.join(sketchy_dir, f))]
-paired_filenames_2 = [os.path.join(flickr_dir, f) for f in os.listdir(flickr_dir)
-                      if os.path.isfile(os.path.join(flickr_dir, f))]
+paired_filenames_1 = [
+    os.path.join(sketchy_dir, f) for f in os.listdir(sketchy_dir) if os.path.isfile(os.path.join(sketchy_dir, f))
+]
+paired_filenames_2 = [
+    os.path.join(flickr_dir, f) for f in os.listdir(flickr_dir) if os.path.isfile(os.path.join(flickr_dir, f))
+]
 
 print("paired file sketchy num: %d" % len(paired_filenames_1))
 print("paired file flickr num: %d" % len(paired_filenames_2))
@@ -48,7 +48,7 @@ def get_num_classes():
 def one_hot_to_dense(labels):
     # Assume on value is 1
     batch_size = int(labels.get_shape()[0])
-    return tf.reshape(tf.where(tf.equal(labels, 1))[:, 1], (batch_size,))
+    return tf.reshape(tf.where(tf.equal(labels, 1))[:, 1], (batch_size, ))
 
 
 def map_class_id_to_labels(batch_class_id, class_mapping=class_mapping):
@@ -57,8 +57,8 @@ def map_class_id_to_labels(batch_class_id, class_mapping=class_mapping):
     for i in range(num_classes):
         comparison = tf.equal(batch_class_id_backup, tf.constant(class_mapping[i], dtype=tf.int64))
         batch_class_id = tf.where(comparison, tf.ones_like(batch_class_id) * i, batch_class_id)
-    ret_tensor = tf.squeeze(tf.one_hot(tf.cast(batch_class_id, dtype=tf.int32), num_classes,
-                                       on_value=1, off_value=0, axis=1))
+    ret_tensor = tf.squeeze(
+        tf.one_hot(tf.cast(batch_class_id, dtype=tf.int32), num_classes, on_value=1, off_value=0, axis=1))
     return ret_tensor
 
 
@@ -67,13 +67,16 @@ def binarize(sketch, threshold=250):
 
 
 # SKETCH_CHANNEL = 3
-SIZE = {True: (64, 64),
-        False: (256, 256)}
+SIZE = {True: (64, 64), False: (256, 256)}
 
 
 # Distance map first, then resize
-def get_paired_input(paired_filenames, test_mode, distance_map=True, img_dim=(256, 256),
-                     fancy_upscaling=False, data_format='NCHW'):
+def get_paired_input(paired_filenames,
+                     test_mode,
+                     distance_map=True,
+                     img_dim=(256, 256),
+                     fancy_upscaling=False,
+                     data_format='NCHW'):
     if test_mode:
         num_epochs = 1
         shuffle = False
@@ -107,8 +110,7 @@ def get_paired_input(paired_filenames, test_mode, distance_map=True, img_dim=(25
             'sketch_small_png': tf.FixedLenFeature([], tf.string),
             'dist_map_png': tf.FixedLenFeature([], tf.string),
             'dist_map_small_png': tf.FixedLenFeature([], tf.string),
-        }
-    )
+        })
 
     if img_dim[0] < 64:
         image = tf.image.decode_jpeg(features['image_small_jpeg'], fancy_upscaling=fancy_upscaling)
@@ -142,8 +144,8 @@ def get_paired_input(paired_filenames, test_mode, distance_map=True, img_dim=(25
         sketch = binarize(sketch)
         sketch_shape = sketch.shape
 
-        sketch = tf.py_func(lambda x: ndimage.distance_transform_edt(x).astype(np.float32),
-                            [sketch], tf.float32, stateful=False)
+        sketch = tf.py_func(
+            lambda x: ndimage.distance_transform_edt(x).astype(np.float32), [sketch], tf.float32, stateful=False)
         sketch = tf.reshape(sketch, sketch_shape)
         # Normalize
         sketch = sketch / tf.reduce_max(sketch) * 255.
@@ -199,16 +201,21 @@ def get_paired_input(paired_filenames, test_mode, distance_map=True, img_dim=(25
     return image, sketch, class_id, is_valid, category, imagenet_id, sketch_id
 
 
-def build_input_queue_paired_sketchy(batch_size, data_format='NCHW', distance_map=True, small=True, one_hot=False,
+def build_input_queue_paired_sketchy(batch_size,
+                                     data_format='NCHW',
+                                     distance_map=True,
+                                     small=True,
+                                     one_hot=False,
                                      capacity=8192):
     image, sketch, class_id, is_valid, _, _, _ = get_paired_input(
         paired_filenames_1, test_mode=False, distance_map=distance_map, img_dim=SIZE[small], data_format=data_format)
 
-    images, sketches, class_ids = tf.train.maybe_shuffle_batch(
-        [image, sketch, class_id],
-        batch_size=batch_size, capacity=capacity,
-        keep_input=is_valid, min_after_dequeue=32,
-        num_threads=4)
+    images, sketches, class_ids = tf.train.maybe_shuffle_batch([image, sketch, class_id],
+                                                               batch_size=batch_size,
+                                                               capacity=capacity,
+                                                               keep_input=is_valid,
+                                                               min_after_dequeue=32,
+                                                               num_threads=4)
 
     if one_hot:
         labels = map_class_id_to_labels(class_ids)
@@ -217,15 +224,21 @@ def build_input_queue_paired_sketchy(batch_size, data_format='NCHW', distance_ma
     return images, sketches, labels
 
 
-def build_input_queue_paired_sketchy_test(batch_size, data_format='NCHW', distance_map=True, small=True, one_hot=False,
+def build_input_queue_paired_sketchy_test(batch_size,
+                                          data_format='NCHW',
+                                          distance_map=True,
+                                          small=True,
+                                          one_hot=False,
                                           capacity=8192):
     image, sketch, class_id, is_valid, category, imagenet_id, sketch_id = get_paired_input(
         paired_filenames_1, test_mode=True, distance_map=distance_map, img_dim=SIZE[small], data_format=data_format)
 
     images, sketches, class_ids, categories, imagenet_ids, sketch_ids = tf.train.maybe_batch(
         [image, sketch, class_id, category, imagenet_id, sketch_id],
-        batch_size=batch_size, capacity=capacity,
-        keep_input=is_valid, num_threads=2)
+        batch_size=batch_size,
+        capacity=capacity,
+        keep_input=is_valid,
+        num_threads=2)
 
     if one_hot:
         labels = map_class_id_to_labels(class_ids)
@@ -235,16 +248,21 @@ def build_input_queue_paired_sketchy_test(batch_size, data_format='NCHW', distan
     return images, sketches, labels, categories, imagenet_ids, sketch_ids
 
 
-def build_input_queue_paired_flickr(batch_size, data_format='NCHW', distance_map=True, small=True, one_hot=False,
-                                    capacity=int(1.5 * 2 ** 15)):
+def build_input_queue_paired_flickr(batch_size,
+                                    data_format='NCHW',
+                                    distance_map=True,
+                                    small=True,
+                                    one_hot=False,
+                                    capacity=int(1.5 * 2**15)):
     image, sketch, class_id, is_valid, _, _, _ = get_paired_input(
         paired_filenames_2, test_mode=False, distance_map=distance_map, img_dim=SIZE[small], data_format=data_format)
 
-    images, sketches, class_ids = tf.train.maybe_shuffle_batch(
-        [image, sketch, class_id],
-        batch_size=batch_size, capacity=capacity,
-        keep_input=is_valid, min_after_dequeue=512,
-        num_threads=4)
+    images, sketches, class_ids = tf.train.maybe_shuffle_batch([image, sketch, class_id],
+                                                               batch_size=batch_size,
+                                                               capacity=capacity,
+                                                               keep_input=is_valid,
+                                                               min_after_dequeue=512,
+                                                               num_threads=4)
 
     if one_hot:
         labels = map_class_id_to_labels(class_ids)
@@ -254,16 +272,29 @@ def build_input_queue_paired_flickr(batch_size, data_format='NCHW', distance_map
     return images, sketches, labels
 
 
-def build_input_queue_paired_mixed(batch_size, proportion=None, data_format='NCHW', distance_map=True, small=True,
-                                   one_hot=False, capacity=int(1.5 * 2 ** 15)):
+def build_input_queue_paired_mixed(batch_size,
+                                   proportion=None,
+                                   data_format='NCHW',
+                                   distance_map=True,
+                                   small=True,
+                                   one_hot=False,
+                                   capacity=int(1.5 * 2**15)):
     def _sk_list():
         image_sk, sketch_sk, class_id_sk, is_valid_sk, _, _, _ = get_paired_input(
-            paired_filenames_1, test_mode=False, distance_map=distance_map, img_dim=SIZE[small], data_format=data_format)
+            paired_filenames_1,
+            test_mode=False,
+            distance_map=distance_map,
+            img_dim=SIZE[small],
+            data_format=data_format)
         return image_sk, sketch_sk, class_id_sk, is_valid_sk
 
     def _f_list():
         image_f, sketch_f, class_id_f, is_valid_f, _, _, _ = get_paired_input(
-            paired_filenames_2, test_mode=False, distance_map=distance_map, img_dim=SIZE[small], data_format=data_format)
+            paired_filenames_2,
+            test_mode=False,
+            distance_map=distance_map,
+            img_dim=SIZE[small],
+            data_format=data_format)
         return image_f, sketch_f, class_id_f, is_valid_f
 
     idx = tf.floor(tf.random_uniform(shape=(), minval=0., maxval=1., dtype=tf.float32) + proportion)
@@ -276,11 +307,12 @@ def build_input_queue_paired_mixed(batch_size, proportion=None, data_format='NCH
     is_valid = tf.cast(is_valid, tf.bool)
     # is_valid = tf.Print(is_valid, [idx, sk_list[4], f_list[4], class_id, sk_list[5], f_list[5], is_valid])
 
-    images, sketches, class_ids = tf.train.maybe_shuffle_batch(
-        [image, sketch, class_id],
-        batch_size=batch_size, capacity=capacity,
-        keep_input=is_valid, min_after_dequeue=512,
-        num_threads=4)
+    images, sketches, class_ids = tf.train.maybe_shuffle_batch([image, sketch, class_id],
+                                                               batch_size=batch_size,
+                                                               capacity=capacity,
+                                                               keep_input=is_valid,
+                                                               min_after_dequeue=512,
+                                                               num_threads=4)
 
     if one_hot:
         labels = map_class_id_to_labels(class_ids)
