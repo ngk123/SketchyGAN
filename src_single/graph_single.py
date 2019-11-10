@@ -74,7 +74,8 @@ def gather_summaries(max_outputs=100):
     img_sum_2t1 = tf.summary.image("img_2_to_1", tf.get_collection("img_2_to_1")[0], max_outputs=max_outputs)
     img_sum_2t1_b = tf.summary.image("img_2_to_1_b", tf.get_collection("img_2_to_1_b")[0], max_outputs=max_outputs)
     if len(tf.get_collection("dist_map_img_2")) > 0:
-        dist_map_sum_2 = tf.summary.image("dist_map_img_2", tf.get_collection("dist_map_img_2")[0], max_outputs=max_outputs)
+        dist_map_sum_2 = tf.summary.image(
+            "dist_map_img_2", tf.get_collection("dist_map_img_2")[0], max_outputs=max_outputs)
 
     # Scalar
     tf.summary.scalar("GAN_loss/G", tf.reduce_mean(tf.get_collection("GAN_loss_g")))
@@ -102,14 +103,24 @@ def gather_losses():
     return loss_g, loss_d
 
 
-def build_multi_tower_graph(images, sketches, images_d,
+def build_multi_tower_graph(images,
+                            sketches,
+                            images_d,
                             sketches_100,
-                            image_paired_class_ids, image_paired_class_ids_d, image_paired_class_ids_100,
-                            batch_size, num_gpu, batch_portion, training,
-                            learning_rates, counter, proportion,
+                            image_paired_class_ids,
+                            image_paired_class_ids_d,
+                            image_paired_class_ids_100,
+                            batch_size,
+                            num_gpu,
+                            batch_portion,
+                            training,
+                            learning_rates,
+                            counter,
+                            proportion,
                             max_iter_step,
                             ld=10,
-                            data_format='NCHW', distance_map=True,
+                            data_format='NCHW',
+                            distance_map=True,
                             optimizer='Adam'):
     models.set_param(data_format=data_format)
     tf.add_to_collection("sketch_proportion", proportion)
@@ -136,20 +147,21 @@ def build_multi_tower_graph(images, sketches, images_d,
         with tf.device('/gpu:%d' % i):
             with tf.name_scope('%s_%d' % ('GPU', i)) as scope:
                 print('GPU %d' % i)
-                loss_g, loss_d, grad_g, grad_d, inception_gen_out = build_single_graph(images_list[i],
-                                                                                       sketches_list[i],
-                                                                                       images_d_list[i],
-                                                                                       sketches_100_list[i],
-                                                                                       image_paired_class_ids_list[i],
-                                                                                       image_paired_class_ids_d_list[i],
-                                                                                       image_paired_class_ids_100_list[
-                                                                                           i],
-                                                                                       batch_size * batch_portion[i],
-                                                                                       training,
-                                                                                       ld=ld, data_format=data_format,
-                                                                                       distance_map=distance_map,
-                                                                                       optim_g=optim_g,
-                                                                                       optim_d=optim_d)
+                loss_g, loss_d, grad_g, grad_d, inception_gen_out = build_single_graph(
+                    images_list[i],
+                    sketches_list[i],
+                    images_d_list[i],
+                    sketches_100_list[i],
+                    image_paired_class_ids_list[i],
+                    image_paired_class_ids_d_list[i],
+                    image_paired_class_ids_100_list[i],
+                    batch_size * batch_portion[i],
+                    training,
+                    ld=ld,
+                    data_format=data_format,
+                    distance_map=distance_map,
+                    optim_g=optim_g,
+                    optim_d=optim_d)
 
                 tower_grads_g.append(grad_g)
                 tower_grads_d.append(grad_d)
@@ -162,7 +174,7 @@ def build_multi_tower_graph(images, sketches, images_d,
         ave_grad_g, ave_grad_d = average_gradients((tower_grads_g, tower_grads_d))
 
     # Apply gradients
-    tf.get_variable_scope()._reuse = False    # Hack to force initialization of optimizer variables
+    tf.get_variable_scope()._reuse = False  # Hack to force initialization of optimizer variables
 
     if Config.sn:
         # Get the update ops
@@ -195,10 +207,22 @@ def build_multi_tower_graph(images, sketches, images_d,
         ave_grad_d_tensors = [clip_ops.clip_by_norm(t, hard_clip_norm_D) for t in ave_grad_d_tensors]
         ave_grad_d = list(zip(ave_grad_d_tensors, ave_grad_d_vars))
     with tf.control_dependencies(spectral_norm_update_ops):
-        opt_g = optimize(ave_grad_g, optim_g, None, 'gradient_norm', global_norm=global_grad_norm_G,
-                         global_norm_clipped=global_grad_norm_G_clipped, appendix='_G')
-    opt_d = optimize(ave_grad_d, optim_d, None, 'gradient_norm', global_norm=global_grad_norm_D,
-                     global_norm_clipped=global_grad_norm_D_clipped, appendix='_D')
+        opt_g = optimize(
+            ave_grad_g,
+            optim_g,
+            None,
+            'gradient_norm',
+            global_norm=global_grad_norm_G,
+            global_norm_clipped=global_grad_norm_G_clipped,
+            appendix='_G')
+    opt_d = optimize(
+        ave_grad_d,
+        optim_d,
+        None,
+        'gradient_norm',
+        global_norm=global_grad_norm_D,
+        global_norm_clipped=global_grad_norm_D_clipped,
+        appendix='_D')
 
     summaries = gather_summaries()
     loss_g, loss_d = gather_losses()
@@ -207,21 +231,32 @@ def build_multi_tower_graph(images, sketches, images_d,
     return opt_g, opt_d, loss_g, loss_d, summaries, inception_gen_out
 
 
-def build_single_graph(images, sketches, images_d,
+def build_single_graph(images,
+                       sketches,
+                       images_d,
                        sketches_100,
-                       image_data_class_id, image_data_class_id_d, image_data_2_class_id_100,
-                       batch_size, training,
+                       image_data_class_id,
+                       image_data_class_id_d,
+                       image_data_2_class_id_100,
+                       batch_size,
+                       training,
                        ld=10,
-                       data_format='NCHW', distance_map=True,
-                       optim_g=None, optim_d=None):
-
+                       data_format='NCHW',
+                       distance_map=True,
+                       optim_g=None,
+                       optim_d=None):
     def transfer(image_data, labels, num_classes, reuse=False, data_format=data_format, output_channel=3):
 
         generator_scope = 'generator'
 
-        image_gen, noise = generator(image_data, output_channel=output_channel, num_classes=num_classes,
-                                     reuse=reuse, data_format=data_format, labels=labels,
-                                     scope_name=generator_scope)
+        image_gen, noise = generator(
+            image_data,
+            output_channel=output_channel,
+            num_classes=num_classes,
+            reuse=reuse,
+            data_format=data_format,
+            labels=labels,
+            scope_name=generator_scope)
 
         return image_gen, noise, labels
 
@@ -233,44 +268,66 @@ def build_single_graph(images, sketches, images_d,
     generator = models.generator
     discriminator = models.critic
 
-    image_gens, image_gens_noise, image_labels = transfer(sketches, image_data_class_id,
-                                                          num_classes=num_classes, reuse=True,
-                                                          data_format=data_format,
-                                                          output_channel=3)
-    image_gens_b, image_gens_noise_b, image_labels_b = transfer(sketches, image_data_class_id,
-                                                                num_classes=num_classes, reuse=True,
-                                                                data_format=data_format,
-                                                                output_channel=3)
+    image_gens, image_gens_noise, image_labels = transfer(
+        sketches, image_data_class_id, num_classes=num_classes, reuse=False, data_format=data_format, output_channel=3)
+    image_gens_b, image_gens_noise_b, image_labels_b = transfer(
+        sketches, image_data_class_id, num_classes=num_classes, reuse=True, data_format=data_format, output_channel=3)
 
     if not training:
         return image_gens, images, sketches
 
     # Inception Generation
-    image_gen_100, _, _ = transfer(sketches_100, image_data_2_class_id_100, num_classes=num_classes,
-                                   reuse=True, data_format=data_format, output_channel=3)
+    image_gen_100, _, _ = transfer(
+        sketches_100,
+        image_data_2_class_id_100,
+        num_classes=num_classes,
+        reuse=True,
+        data_format=data_format,
+        output_channel=3)
 
     # Discriminator
-    real_disc_out, real_logit = discriminator(images_d, num_classes=num_classes, labels=image_data_class_id_d,
-                                              reuse=False, data_format=data_format, scope_name='discriminator')
-    fake_disc_out, fake_logit = discriminator(image_gens, num_classes=num_classes, labels=image_labels,
-                                              reuse=True, data_format=data_format, scope_name='discriminator')
+    real_disc_out, real_logit = discriminator(
+        images_d,
+        num_classes=num_classes,
+        labels=image_data_class_id_d,
+        reuse=False,
+        data_format=data_format,
+        scope_name='discriminator')
+    fake_disc_out, fake_logit = discriminator(
+        image_gens,
+        num_classes=num_classes,
+        labels=image_labels,
+        reuse=True,
+        data_format=data_format,
+        scope_name='discriminator')
     ############################# End Graph ##############################
 
-    loss_g, loss_d = get_losses(discriminator, None,
-                                num_classes, data_format, ld,
-                                # images
-                                images, sketches,
-                                images_d,
-                                image_gens, image_gens_b,
-                                # latent and labels
-                                image_data_class_id, image_data_class_id_d,
-                                image_gens_noise, image_gens_noise_b,
-                                image_labels, image_labels_b,
-                                # critic out
-                                real_disc_out, fake_disc_out,
-                                # logit
-                                real_logit, fake_logit,
-                                )
+    loss_g, loss_d = get_losses(
+        discriminator,
+        None,
+        num_classes,
+        data_format,
+        ld,
+        # images
+        images,
+        sketches,
+        images_d,
+        image_gens,
+        image_gens_b,
+        # latent and labels
+        image_data_class_id,
+        image_data_class_id_d,
+        image_gens_noise,
+        image_gens_noise_b,
+        image_labels,
+        image_labels_b,
+        # critic out
+        real_disc_out,
+        fake_disc_out,
+        # logit
+        real_logit,
+        fake_logit,
+    )
 
     if data_format == 'NCHW':
         tf.add_to_collection("original_img", tf.transpose(images, (0, 2, 3, 1)))
@@ -300,43 +357,59 @@ def build_single_graph(images, sketches, images_d,
     # summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
 
     # Calculate Gradient
-    grad_g, grad_d = compute_gradients((loss_g, loss_d),
-                                       (optim_g, optim_d),
-                                       var_lists=(var_collections['generator'],
-                                                  var_collections['discriminator']))
+    grad_g, grad_d = compute_gradients((loss_g, loss_d), (optim_g, optim_d),
+                                       var_lists=(var_collections['generator'], var_collections['discriminator']))
 
     return loss_g, loss_d, grad_g, grad_d, image_gen_100
 
 
-def get_losses(discriminator, vae_sampler,
-               num_classes, data_format, ld,
-               # images
-               images, sketches,
-               image_d,
-               image_gens, image_gens_b,
-               # latent and labels
-               image_data_class_id, image_data_class_id_d,
-               image_gens_noise, image_gens_noise_b,
-               image_labels, image_labels_b,
-               # critic out
-               real_disc_out, fake_disc_out,
-               # logit
-               real_logit, fake_logit,
-               ):
-
+def get_losses(
+        discriminator,
+        vae_sampler,
+        num_classes,
+        data_format,
+        ld,
+        # images
+        images,
+        sketches,
+        image_d,
+        image_gens,
+        image_gens_b,
+        # latent and labels
+        image_data_class_id,
+        image_data_class_id_d,
+        image_gens_noise,
+        image_gens_noise_b,
+        image_labels,
+        image_labels_b,
+        # critic out
+        real_disc_out,
+        fake_disc_out,
+        # logit
+        real_logit,
+        fake_logit,
+):
     def perturb(input_data):
         input_dims = len(input_data.get_shape())
         reduce_axes = [0] + list(range(1, input_dims))
-        ret = input_data + 0.5 * tf.sqrt(tf.nn.moments(input_data, axes=reduce_axes)[1]) * tf.random_uniform(input_data.shape)
+        ret = input_data + 0.5 * tf.sqrt(tf.nn.moments(input_data, axes=reduce_axes)[1]) * tf.random_uniform(
+            input_data.shape)
         # ret = input_data + tf.random_normal(input_data.shape, stddev=2.0)
         return ret
 
-    def get_acgan_loss_focal(real_image_logits_out, real_image_label,
-                             disc_image_logits_out, condition,
-                             num_classes, ld1=1, ld2=0.5, ld_focal=2.):
-        loss_ac_d = tf.reduce_mean((1 - tf.reduce_sum(tf.nn.softmax(real_image_logits_out) * tf.squeeze(
-            tf.one_hot(real_image_label, num_classes, on_value=1., off_value=0., dtype=tf.float32)), axis=1)) ** ld_focal *
-            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=real_image_logits_out, labels=real_image_label))
+    def get_acgan_loss_focal(real_image_logits_out,
+                             real_image_label,
+                             disc_image_logits_out,
+                             condition,
+                             num_classes,
+                             ld1=1,
+                             ld2=0.5,
+                             ld_focal=2.):
+        loss_ac_d = tf.reduce_mean((1 - tf.reduce_sum(
+            tf.nn.softmax(real_image_logits_out) * tf.squeeze(
+                tf.one_hot(real_image_label, num_classes, on_value=1., off_value=0., dtype=tf.float32)),
+            axis=1))**ld_focal * tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=real_image_logits_out, labels=real_image_label))
         loss_ac_d = ld1 * loss_ac_d
 
         loss_ac_g = tf.reduce_mean(
@@ -344,9 +417,13 @@ def get_losses(discriminator, vae_sampler,
         loss_ac_g = ld2 * loss_ac_g
         return loss_ac_g, loss_ac_d
 
-    def get_acgan_loss_orig(real_image_logits_out, real_image_label,
-                            disc_image_logits_out, condition, num_classes,
-                            ld1=1, ld2=0.5):
+    def get_acgan_loss_orig(real_image_logits_out,
+                            real_image_label,
+                            disc_image_logits_out,
+                            condition,
+                            num_classes,
+                            ld1=1,
+                            ld2=0.5):
         loss_ac_d = tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(logits=real_image_logits_out, labels=real_image_label))
         loss_ac_d = ld1 * loss_ac_d
@@ -356,10 +433,15 @@ def get_losses(discriminator, vae_sampler,
         loss_ac_g = ld2 * loss_ac_g
         return loss_ac_g, loss_ac_d
 
-    def get_loss_wgan_global_gp(discriminator, data_format,
-                                fake_data_out, fake_data_out_, real_data_out,
-                                fake_data, real_data,
-                                scope=None, ld=ld):
+    def get_loss_wgan_global_gp(discriminator,
+                                data_format,
+                                fake_data_out,
+                                fake_data_out_,
+                                real_data_out,
+                                fake_data,
+                                real_data,
+                                scope=None,
+                                ld=ld):
         assert scope is not None
         assert real_data.get_shape()[0] == fake_data.get_shape()[0]
         ndim = len(real_data.get_shape())
@@ -374,24 +456,28 @@ def get_losses(discriminator, vae_sampler,
 
         # Gradient penalty
         batch_size = int(real_data.get_shape()[0])
-        alpha = tf.random_uniform(shape=[batch_size, 1, 1, 1] if ndim == 4 else [batch_size, 1],
-                                  minval=0., maxval=1., dtype=tf.float32)
+        alpha = tf.random_uniform(
+            shape=[batch_size, 1, 1, 1] if ndim == 4 else [batch_size, 1], minval=0., maxval=1., dtype=tf.float32)
         diff = fake_data - real_data
         interp = real_data + (alpha * diff)
-        gradients = tf.gradients(discriminator(interp, num_classes=num_classes, reuse=True,
-                                               data_format=data_format, scope_name=scope)[0],
-                                 [interp])[0]
+        gradients = tf.gradients(
+            discriminator(interp, num_classes=num_classes, reuse=True, data_format=data_format, scope_name=scope)[0],
+            [interp])[0]
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3] if ndim == 4 else [1]))
-        gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
+        gradient_penalty = tf.reduce_mean((slopes - 1.)**2)
         tf.add_to_collection("GAN_loss_d_gp", gradient_penalty)
 
         loss_d += ld * gradient_penalty
 
         return loss_g, loss_d
 
-    def get_loss_wgan_sn(discriminator, data_format,
-                         fake_data_out, fake_data_out_, real_data_out,
-                         fake_data, real_data,
+    def get_loss_wgan_sn(discriminator,
+                         data_format,
+                         fake_data_out,
+                         fake_data_out_,
+                         real_data_out,
+                         fake_data,
+                         real_data,
                          scope=None):
         assert scope is not None
         assert real_data.get_shape()[0] == fake_data.get_shape()[0]
@@ -422,10 +508,15 @@ def get_losses(discriminator, vae_sampler,
 
         return loss_g, loss_d
 
-    def get_loss_original_gan_local_gp_one_side_multi(discriminator, data_format,
-                                                      fake_data_out, fake_data_out_, real_data_out,
-                                                      fake_data, real_data,
-                                                      scope=None, ld=ld):
+    def get_loss_original_gan_local_gp_one_side_multi(discriminator,
+                                                      data_format,
+                                                      fake_data_out,
+                                                      fake_data_out_,
+                                                      real_data_out,
+                                                      fake_data,
+                                                      real_data,
+                                                      scope=None,
+                                                      ld=ld):
         assert scope is not None
         # assert real_data.get_shape()[0] == fake_data.get_shape()[0]
         ndim = len(real_data.get_shape())
@@ -441,12 +532,18 @@ def get_losses(discriminator, vae_sampler,
         else:
             concat_axis = 3
 
-        loss_d_fake = tf.reduce_mean(tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=fake_data_out, labels=tf.zeros_like(fake_data_out)), axis=sum_axis))
-        loss_d_real = tf.reduce_mean(tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=real_data_out, labels=tf.ones_like(real_data_out)), axis=sum_axis))
-        loss_g_fake = tf.reduce_mean(tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=fake_data_out, labels=tf.ones_like(fake_data_out)), axis=sum_axis))
+        loss_d_fake = tf.reduce_mean(
+            tf.reduce_sum(
+                tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_data_out, labels=tf.zeros_like(fake_data_out)),
+                axis=sum_axis))
+        loss_d_real = tf.reduce_mean(
+            tf.reduce_sum(
+                tf.nn.sigmoid_cross_entropy_with_logits(logits=real_data_out, labels=tf.ones_like(real_data_out)),
+                axis=sum_axis))
+        loss_g_fake = tf.reduce_mean(
+            tf.reduce_sum(
+                tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_data_out, labels=tf.ones_like(fake_data_out)),
+                axis=sum_axis))
         loss_g = loss_g_fake
         loss_d = loss_d_fake + loss_d_real
         loss_d /= 2
@@ -454,15 +551,15 @@ def get_losses(discriminator, vae_sampler,
         batch_size = int(real_data.get_shape()[0])
 
         # Gradient penalty
-        alpha = tf.random_uniform(shape=[batch_size, 1, 1, 1] if ndim == 4 else [batch_size, 1],
-                                  minval=0., maxval=1., dtype=tf.float32)
+        alpha = tf.random_uniform(
+            shape=[batch_size, 1, 1, 1] if ndim == 4 else [batch_size, 1], minval=0., maxval=1., dtype=tf.float32)
         diff = perturb(real_data) - real_data
         interp = real_data + (alpha * diff)
-        gradients = tf.gradients(discriminator(interp, num_classes=num_classes, reuse=True,
-                                               data_format=data_format, scope_name=scope)[0],
-                                 [interp])[0]
+        gradients = tf.gradients(
+            discriminator(interp, num_classes=num_classes, reuse=True, data_format=data_format, scope_name=scope)[0],
+            [interp])[0]
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3] if ndim == 4 else [1]))
-        gradient_penalty = tf.reduce_mean(tf.maximum(0., slopes - 1.) ** 2)
+        gradient_penalty = tf.reduce_mean(tf.maximum(0., slopes - 1.)**2)
         loss_d += ld * gradient_penalty
         tf.add_to_collection("GAN_loss_d_gp", gradient_penalty)
 
@@ -478,7 +575,6 @@ def get_losses(discriminator, vae_sampler,
         return [end_points['Conv2d_2a_3x3'], end_points['Mixed_4a'], end_points['Mixed_5b']]
 
     def build_vgg(inputs, reuse=True, scope='vgg_16', num=0):
-
         def get_endpoint(end_points, name):
             for key in end_points.keys():
                 if name in key:
@@ -487,10 +583,14 @@ def get_losses(discriminator, vae_sampler,
         is_training = False
         arg_scope = vgg_arg_scope(weight_decay=0.0)
         with slim.arg_scope(arg_scope):
-            logits, end_points, my_end_points = vgg_16(inputs, is_training=is_training,
-                                                       reuse=reuse, scope=scope, num=num)
-        return [get_endpoint(end_points, 'conv1_2'), get_endpoint(end_points, 'conv2_2'),
-                get_endpoint(end_points, 'conv3_2'), get_endpoint(end_points, 'conv4_2'), ]
+            logits, end_points, my_end_points = vgg_16(
+                inputs, is_training=is_training, reuse=reuse, scope=scope, num=num)
+        return [
+            get_endpoint(end_points, 'conv1_2'),
+            get_endpoint(end_points, 'conv2_2'),
+            get_endpoint(end_points, 'conv3_2'),
+            get_endpoint(end_points, 'conv4_2'),
+        ]
 
     def get_perceptual_loss(image1, image2, data_format, type="Inception", reuse=True):
         assert data_format == 'NCHW'
@@ -549,7 +649,7 @@ def get_losses(discriminator, vae_sampler,
 
         loss_perceptual = 0.
         for i in range(len(image2_lys)):
-            loss_perceptual += tf.reduce_mean(tf.abs(image2_lys[i] - image1_lys[i]))    # L1
+            loss_perceptual += tf.reduce_mean(tf.abs(image2_lys[i] - image1_lys[i]))  # L1
             # loss_perceptual += coeffs[i] * tf.sqrt(tf.reduce_sum(tf.square(image2_lys[i] - image1_lys[i]), axis=[1, 2, 3]))    # L2
             # loss_perceptual = coeffs[i] * models.vae_loss_reconstruct(image2_lys[i], image1_lys[i])       # log-likelihood
         return loss_perceptual
@@ -563,21 +663,22 @@ def get_losses(discriminator, vae_sampler,
             get_gan_loss = get_loss_original_gan_local_gp_one_side_multi
 
     # GAN Loss, current stage
-    loss_g_gan, loss_d_gan = get_gan_loss(discriminator, data_format,
-                                          fake_disc_out,
-                                          fake_disc_out,
-                                          real_disc_out,
-                                          image_gens,
-                                          image_d,
-                                          scope='discriminator')
+    loss_g_gan, loss_d_gan = get_gan_loss(
+        discriminator,
+        data_format,
+        fake_disc_out,
+        fake_disc_out,
+        real_disc_out,
+        image_gens,
+        image_d,
+        scope='discriminator')
     tf.add_to_collection("GAN_loss_g", loss_g_gan)
     tf.add_to_collection("GAN_loss_d", loss_d_gan)
 
     # ACGAN loss
     if not Config.proj_d:
-        loss_g_ac, loss_d_ac = get_acgan_loss_focal(real_logit, image_data_class_id_d,
-                                                    fake_logit, image_labels,
-                                                    num_classes=num_classes)
+        loss_g_ac, loss_d_ac = get_acgan_loss_focal(
+            real_logit, image_data_class_id_d, fake_logit, image_labels, num_classes=num_classes)
         tf.add_to_collection("ACGAN_loss_g", loss_g_ac)
         tf.add_to_collection("ACGAN_loss_d", loss_d_ac)
 
@@ -587,8 +688,8 @@ def get_losses(discriminator, vae_sampler,
     # Direct loss
     loss_gt = 0.
     loss_gt += tf.losses.absolute_difference(images, image_gens)  # L1
-    loss_gt += 0.3 * get_perceptual_loss(images, image_gens,
-                                         data_format=data_format, type="Inception", reuse=False)  # Perceptual
+    loss_gt += 0.3 * get_perceptual_loss(
+        images, image_gens, data_format=data_format, type="Inception", reuse=False)  # Perceptual
     tf.add_to_collection("direct_loss", loss_gt)
 
     # Diversity loss
@@ -637,14 +738,11 @@ def optimize(gradients, optim, global_step, summaries, global_norm=None, global_
         summaries = ["loss", "learning_rate"]
     if "gradient_norm" in summaries:
         if global_norm is None:
-            tf.summary.scalar("global_norm/gradient_norm" + appendix,
-                              clip_ops.global_norm(list(zip(*gradients))[0]))
+            tf.summary.scalar("global_norm/gradient_norm" + appendix, clip_ops.global_norm(list(zip(*gradients))[0]))
         else:
-            tf.summary.scalar("global_norm/gradient_norm" + appendix,
-                              global_norm)
+            tf.summary.scalar("global_norm/gradient_norm" + appendix, global_norm)
         if global_norm_clipped is not None:
-            tf.summary.scalar("global_norm/gradient_norm_clipped" + appendix,
-                              global_norm_clipped)
+            tf.summary.scalar("global_norm/gradient_norm_clipped" + appendix, global_norm_clipped)
 
     # Add histograms for variables, gradients and gradient norms.
     for gradient, variable in gradients:
@@ -658,8 +756,7 @@ def optimize(gradients, optim, global_step, summaries, global_norm=None, global_
             if "gradients" in summaries:
                 tf.summary.histogram("gradients/%s" % var_name, grad_values)
             if "gradient_norm" in summaries:
-                tf.summary.scalar("gradient_norm/%s" % var_name,
-                                  clip_ops.global_norm([grad_values]))
+                tf.summary.scalar("gradient_norm/%s" % var_name, clip_ops.global_norm([grad_values]))
 
     # Gradient Update OP
     return optim.apply_gradients(gradients, global_step=global_step)
