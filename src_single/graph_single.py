@@ -234,7 +234,7 @@ def build_single_graph(images, sketches, images_d,
     discriminator = models.critic
 
     image_gens, image_gens_noise, image_labels = transfer(sketches, image_data_class_id,
-                                                          num_classes=num_classes, reuse=False,
+                                                          num_classes=num_classes, reuse=True,
                                                           data_format=data_format,
                                                           output_channel=3)
     image_gens_b, image_gens_noise_b, image_labels_b = transfer(sketches, image_data_class_id,
