@@ -52,7 +52,6 @@ def print_parameter_count(verbose=False):
 
 
 def train(**kwargs):
-
     def get_inception_score_origin(generator_out, data_format, session, n):
         all_samples = []
         img_dim = 64
@@ -112,32 +111,41 @@ def train(**kwargs):
             proportion=proportion,
             data_format=data_format,
             distance_map=distance_map,
-            small=small, capacity=2 ** 11)
+            small=small,
+            capacity=2**11)
     with tf.device('/cpu:0'):
         images_d, _, image_paired_class_ids_d = build_input_queue_paired_mixed(
             batch_size=batch_size * num_gpu,
             proportion=tf.constant(0.1, dtype=tf.float32),
             data_format=data_format,
             distance_map=distance_map,
-            small=small, capacity=2 ** 11)
+            small=small,
+            capacity=2**11)
     with tf.device('/cpu:0'):
         _, sketches_100, image_paired_class_ids_100 = build_input_queue_paired_sketchy(
-            batch_size=100,
-            data_format=data_format,
-            distance_map=distance_map,
-            small=small, capacity=1024)
+            batch_size=100, data_format=data_format, distance_map=distance_map, small=small, capacity=1024)
 
     opt_g, opt_d, loss_g, loss_d, merged_all, gen_out = build_multi_tower_graph(
-        images, sketches, images_d,
+        images,
+        sketches,
+        images_d,
         sketches_100,
-        image_paired_class_ids, image_paired_class_ids_d, image_paired_class_ids_100,
-        batch_size=batch_size, num_gpu=num_gpu, batch_portion=batch_portion, training=True,
+        image_paired_class_ids,
+        image_paired_class_ids_d,
+        image_paired_class_ids_100,
+        batch_size=batch_size,
+        num_gpu=num_gpu,
+        batch_portion=batch_portion,
+        training=True,
         learning_rates={
             "generator": lr_G,
             "discriminator": lr_D,
         },
-        counter=counter, proportion=proportion, max_iter_step=max_iter_step,
-        ld=ld, data_format=data_format,
+        counter=counter,
+        proportion=proportion,
+        max_iter_step=max_iter_step,
+        ld=ld,
+        data_format=data_format,
         distance_map=distance_map,
         optimizer=optimizer)
 
@@ -158,10 +166,13 @@ def train(**kwargs):
         except:
             saver2 = None
 
-    config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False,
-                            intra_op_parallelism_threads=4, inter_op_parallelism_threads=4,
-                            # device_count={"CPU": 8},
-                            )
+    config = tf.ConfigProto(
+        allow_soft_placement=True,
+        log_device_placement=False,
+        intra_op_parallelism_threads=4,
+        inter_op_parallelism_threads=4,
+        # device_count={"CPU": 8},
+    )
     # config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1   # JIT XLA
     config.gpu_options.allow_growth = True
     # config.gpu_options.per_process_gpu_memory_fraction = 0.9
@@ -192,7 +203,7 @@ def train(**kwargs):
             if status == -1:
                 break
 
-            if i % 100 == 0:
+            if i % 4 == 0:
                 curr_time = time()
                 elapsed = curr_time - prev_time
                 print(
@@ -209,8 +220,7 @@ def train(**kwargs):
                                                      options=run_options,
                                                      run_metadata=run_metadata)
                     summary_writer.add_summary(merged, i)
-                    summary_writer.add_run_metadata(
-                        run_metadata, 'discriminator_metadata {}'.format(i), i)
+                    summary_writer.add_run_metadata(run_metadata, 'discriminator_metadata {}'.format(i), i)
                 else:
                     _, loss_d_out = sess.run([opt_d, loss_d])
                 if np.isnan(np.sum(loss_d_out)):
@@ -225,8 +235,7 @@ def train(**kwargs):
                     options=run_options,
                     run_metadata=run_metadata)
                 summary_writer.add_summary(merged, i)
-                summary_writer.add_run_metadata(
-                    run_metadata, 'generator_metadata {}'.format(i), i)
+                summary_writer.add_run_metadata(run_metadata, 'generator_metadata {}'.format(i), i)
             else:
                 _, loss_g_out, counter_out, _ = sess.run([opt_g, loss_g, counter, counter_addition_op])
             if np.isnan(np.sum(loss_g_out)):
@@ -234,17 +243,17 @@ def train(**kwargs):
                 print("NaN occurred during training G")
                 return status
 
-            if i % 5000 == 4999:
-                saver.save(sess, os.path.join(
-                    ckpt_dir, "model.ckpt"), global_step=i)
+            if i % 5000 == 20:
+                saver.save(sess, os.path.join(ckpt_dir, "model.ckpt"), global_step=i)
 
-            if i % 1000 == 999:
-                this_score = get_inception_score_origin(gen_out, data_format=data_format,
-                                                        session=sess, n=10000)
-                merged_sum = sess.run(inception_score_summary, feed_dict={
-                    inception_score_mean: this_score[0],
-                    inception_score_std: this_score[1],
-                })
+            if i % 10 == 1:
+                this_score = get_inception_score_origin(gen_out, data_format=data_format, session=sess, n=10000)
+                merged_sum = sess.run(
+                    inception_score_summary,
+                    feed_dict={
+                        inception_score_mean: this_score[0],
+                        inception_score_std: this_score[1],
+                    })
                 summary_writer.add_summary(merged_sum, i)
 
         coord.request_stop()
@@ -254,7 +263,6 @@ def train(**kwargs):
 
 
 def test(**kwargs):
-
     def binarize(sketch, threshold=245):
         sketch[sketch < threshold] = 0
         sketch[sketch >= threshold] = 255
@@ -289,15 +297,21 @@ def test(**kwargs):
     # Construct data queue
     with tf.device('/cpu:0'):
         images, sketches, class_ids, categories, imagenet_ids, sketch_ids = build_input_queue_paired_sketchy_test(
-            batch_size=batch_size, data_format=data_format,
-            distance_map=distance_map, small=small, capacity=512)
+            batch_size=batch_size, data_format=data_format, distance_map=distance_map, small=small, capacity=512)
 
     with tf.device('/gpu:0'):
-        ret_list = build_func(images, sketches, None, None,
-                              class_ids, None, None,
-                              batch_size=batch_size, training=False,
-                              data_format=data_format,
-                              distance_map=distance_map)
+        ret_list = build_func(
+            images,
+            sketches,
+            None,
+            None,
+            class_ids,
+            None,
+            None,
+            batch_size=batch_size,
+            training=False,
+            data_format=data_format,
+            distance_map=distance_map)
 
     saver = tf.train.Saver()
 
@@ -322,8 +336,7 @@ def test(**kwargs):
             if counter % 100 == 0:
                 curr_time = time()
                 elapsed = curr_time - prev_time
-                print(
-                    "Now at iteration %d. Elapsed time: %.5fs." % (counter, elapsed))
+                print("Now at iteration %d. Elapsed time: %.5fs." % (counter, elapsed))
                 prev_time = curr_time
 
             if data_format == 'NCHW':
@@ -339,8 +352,7 @@ def test(**kwargs):
 
             for i in range(batch_size):
                 this_prefix = '%s_%d_%d' % (category[i].decode('ascii'),
-                                            int(imagenet_id[i].decode('ascii').split('_')[1]),
-                                            sketch_id[i])
+                                            int(imagenet_id[i].decode('ascii').split('_')[1]), sketch_id[i])
                 img_out_filename = this_prefix + '_fake_B.png'
                 img_gt_filename = this_prefix + '_real_B.png'
                 sketch_in_filename = this_prefix + '_real_A.png'
