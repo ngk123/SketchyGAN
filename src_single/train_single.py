@@ -256,7 +256,7 @@ def train(**kwargs):
                 print(type(out_temp))
 
                 file_name = "gen_out_" + str(i)
-                out_temp.save(file_name)
+                np.save(file_name, out_temp)
 
                 this_score = get_inception_score_origin(gen_out, data_format=data_format, session=sess, n=10000)
 
