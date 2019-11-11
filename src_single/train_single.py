@@ -251,8 +251,10 @@ def train(**kwargs):
 
             if i % 10 == 1:
                 out_temp = sess.run(gen_out)
+                print(out_temp.shape)
                 print(out_temp)
                 print(type(out_temp))
+
                 file_name = "gen_out_" + str(i)
                 out_temp.save(file_name)
 
