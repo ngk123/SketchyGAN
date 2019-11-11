@@ -252,7 +252,8 @@ def train(**kwargs):
             if i % 10 == 1:
                 out_temp = sess.run(gen_out)
                 print(out_temp)
-                file_name = "gen_out_" + i
+                print(type(out_temp))
+                file_name = "gen_out_" + str(i)
                 out_temp.save(file_name)
 
                 this_score = get_inception_score_origin(gen_out, data_format=data_format, session=sess, n=10000)
