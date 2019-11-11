@@ -260,6 +260,8 @@ def train(**kwargs):
 
                 this_score = get_inception_score_origin(gen_out, data_format=data_format, session=sess, n=10000)
 
+                print(this_score)
+                print(type(this_score))
                 merged_sum = sess.run(
                     inception_score_summary,
                     feed_dict={
