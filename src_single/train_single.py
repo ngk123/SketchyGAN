@@ -199,6 +199,9 @@ def train(**kwargs):
 
         sess.run([counter.assign(iter_from)])
 
+        print(" ", iter_from, " ", max_iter_step)
+        print(" ", Diters)
+
         for i in range(iter_from, max_iter_step):
             if status == -1:
                 break
@@ -215,7 +218,7 @@ def train(**kwargs):
             # Train Discriminator
             for j in range(diters):
                 # print(j)
-                if i % 100 == 0 and j == 0:
+                if i % 10 == 0 and j == 0:
                     _, merged, loss_d_out = sess.run([opt_d, merged_all, loss_d],
                                                      options=run_options,
                                                      run_metadata=run_metadata)
@@ -229,7 +232,7 @@ def train(**kwargs):
                     return status
 
             # Train Generator
-            if i % 100 == 0:
+            if i % 10 == 1:
                 _, merged, loss_g_out, counter_out, _ = sess.run(
                     [opt_g, merged_all, loss_g, counter, counter_addition_op],
                     options=run_options,
@@ -243,11 +246,17 @@ def train(**kwargs):
                 print("NaN occurred during training G")
                 return status
 
-            if i % 5000 == 20:
+            if i % 10 == 1:
                 saver.save(sess, os.path.join(ckpt_dir, "model.ckpt"), global_step=i)
 
             if i % 10 == 1:
+                out_temp = sess.run(gen_out)
+                print(out_temp)
+                file_name = "gen_out_" + i
+                out_temp.save(file_name)
+
                 this_score = get_inception_score_origin(gen_out, data_format=data_format, session=sess, n=10000)
+
                 merged_sum = sess.run(
                     inception_score_summary,
                     feed_dict={
