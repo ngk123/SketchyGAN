@@ -219,9 +219,11 @@ def train(**kwargs):
             for j in range(diters):
                 print(j)
                 if i % 10 == 0 and j == 0:
+                    print("Not Arrived")
                     _, merged, loss_d_out = sess.run([opt_d, merged_all, loss_d],
                                                      options=run_options,
                                                      run_metadata=run_metadata)
+                    print("Arrived")
                     summary_writer.add_summary(merged, i)
                     summary_writer.add_run_metadata(run_metadata, 'discriminator_metadata {}'.format(i), i)
                 else:

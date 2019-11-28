@@ -23,6 +23,7 @@ def launch_training(**kwargs):
         if not os.path.isdir(ckpt_dir) and not os.path.exists(ckpt_dir):
             os.makedirs(ckpt_dir)
 
+
         # copy current script in src folder to log dir for record
         if not os.path.exists(src_dir) or not os.path.isdir(src_dir):
             print("src folder does not exist.")
