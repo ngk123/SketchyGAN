@@ -220,8 +220,6 @@ def train(**kwargs):
                 print(j)
                 if i % 10 == 0 and j == 0:
                     print("Not Arrived")
-                    coord = tf.train.Coordinator()
-                    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
                     _, merged, loss_d_out = sess.run([opt_d, merged_all, loss_d],
                                                      options=run_options,
                                                      run_metadata=run_metadata)
@@ -237,8 +235,6 @@ def train(**kwargs):
 
             # Train Generator
             if i % 10 == 1:
-                coord = tf.train.Coordinator()
-                threads = tf.train.start_queue_runners(sess=sess, coord=coord)
                 _, merged, loss_g_out, counter_out, _ = sess.run(
                     [opt_g, merged_all, loss_g, counter, counter_addition_op],
                     options=run_options,
@@ -335,7 +331,7 @@ def test(**kwargs):
 
     saver = tf.train.Saver()
 
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, use_per_session_threads=True)) as sess:
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
