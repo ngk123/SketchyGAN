@@ -205,7 +205,7 @@ def train(**kwargs):
         for i in range(iter_from, max_iter_step):
             if status == -1:
                 break
-
+            print(i)
             if i % 4 == 0:
                 curr_time = time()
                 elapsed = curr_time - prev_time
@@ -217,7 +217,7 @@ def train(**kwargs):
 
             # Train Discriminator
             for j in range(diters):
-                # print(j)
+                print(j)
                 if i % 10 == 0 and j == 0:
                     _, merged, loss_d_out = sess.run([opt_d, merged_all, loss_d],
                                                      options=run_options,
